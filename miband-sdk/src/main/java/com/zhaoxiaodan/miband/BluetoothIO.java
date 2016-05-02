@@ -7,7 +7,9 @@ import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothProfile;
 import android.content.Context;
+import android.os.Handler;
 import android.util.Log;
+
 
 import com.zhaoxiaodan.miband.listeners.NotifyListener;
 import com.zhaoxiaodan.miband.model.Profile;
@@ -17,15 +19,22 @@ import java.util.UUID;
 
 class BluetoothIO extends BluetoothGattCallback {
     private static final String TAG = "BluetoothIO";
-    BluetoothGatt gatt;
+    BluetoothGatt mBluetoothGatt;
+    BluetoothDevice bluetoothDevice;
     ActionCallback currentCallback;
+    Context mContext ;
+    Handler handler=new Handler();
+    boolean isConnected = false ;
 
     HashMap<UUID, NotifyListener> notifyListeners = new HashMap<UUID, NotifyListener>();
     NotifyListener disconnectedListener = null;
 
     public void connect(final Context context, BluetoothDevice device, final ActionCallback callback) {
         BluetoothIO.this.currentCallback = callback;
-        device.connectGatt(context, false, BluetoothIO.this);
+        bluetoothDevice = device ;
+        mContext = context ;
+        //device.connectGatt(context, false, BluetoothIO.this);
+        connectGatt() ;
     }
 
     public void setDisconnectedListener(NotifyListener disconnectedListener) {
@@ -33,11 +42,11 @@ class BluetoothIO extends BluetoothGattCallback {
     }
 
     public BluetoothDevice getDevice() {
-        if (null == gatt) {
+        if (null == mBluetoothGatt) {
             Log.e(TAG, "connect to miband first");
             return null;
         }
-        return gatt.getDevice();
+        return mBluetoothGatt.getDevice();
     }
 
     public void writeAndRead(final UUID uuid, byte[] valueToWrite, final ActionCallback callback) {
@@ -62,19 +71,19 @@ class BluetoothIO extends BluetoothGattCallback {
 
     public void writeCharacteristic(UUID serviceUUID, UUID characteristicUUID, byte[] value, ActionCallback callback) {
         try {
-            if (null == gatt) {
+            if (null == mBluetoothGatt) {
                 Log.e(TAG, "connect to miband first");
                 throw new Exception("connect to miband first");
             }
             this.currentCallback = callback;
-            BluetoothGattCharacteristic chara = gatt.getService(serviceUUID).getCharacteristic(characteristicUUID);
+            BluetoothGattCharacteristic chara = mBluetoothGatt.getService(serviceUUID).getCharacteristic(characteristicUUID);
             if (null == chara) {
                 this.onFail(-1, "BluetoothGattCharacteristic " + characteristicUUID + " is not exsit");
                 return;
             }
             chara.setValue(value);
-            if (false == this.gatt.writeCharacteristic(chara)) {
-                this.onFail(-1, "gatt.writeCharacteristic() return false");
+            if (false == this.mBluetoothGatt.writeCharacteristic(chara)) {
+                this.onFail(-1, "mBluetoothGatt.writeCharacteristic() return false");
             }
         } catch (Throwable tr) {
             Log.e(TAG, "writeCharacteristic", tr);
@@ -84,18 +93,18 @@ class BluetoothIO extends BluetoothGattCallback {
 
     public void readCharacteristic(UUID serviceUUID, UUID uuid, ActionCallback callback) {
         try {
-            if (null == gatt) {
+            if (null == mBluetoothGatt) {
                 Log.e(TAG, "connect to miband first");
                 throw new Exception("connect to miband first");
             }
             this.currentCallback = callback;
-            BluetoothGattCharacteristic chara = gatt.getService(serviceUUID).getCharacteristic(uuid);
+            BluetoothGattCharacteristic chara = mBluetoothGatt.getService(serviceUUID).getCharacteristic(uuid);
             if (null == chara) {
                 this.onFail(-1, "BluetoothGattCharacteristic " + uuid + " is not exsit");
                 return;
             }
-            if (false == this.gatt.readCharacteristic(chara)) {
-                this.onFail(-1, "gatt.readCharacteristic() return false");
+            if (false == this.mBluetoothGatt.readCharacteristic(chara)) {
+                this.onFail(-1, "mBluetoothGatt.readCharacteristic() return false");
             }
         } catch (Throwable tr) {
             Log.e(TAG, "readCharacteristic", tr);
@@ -109,12 +118,12 @@ class BluetoothIO extends BluetoothGattCallback {
 
     public void readRssi(ActionCallback callback) {
         try {
-            if (null == gatt) {
+            if (null == mBluetoothGatt) {
                 Log.e(TAG, "connect to miband first");
                 throw new Exception("connect to miband first");
             }
             this.currentCallback = callback;
-            this.gatt.readRemoteRssi();
+            this.mBluetoothGatt.readRemoteRssi();
         } catch (Throwable tr) {
             Log.e(TAG, "readRssi", tr);
             this.onFail(-1, tr.getMessage());
@@ -123,22 +132,21 @@ class BluetoothIO extends BluetoothGattCallback {
     }
 
     public void setNotifyListener(UUID serviceUUID, UUID characteristicId, NotifyListener listener) {
-        if (null == gatt) {
+        if (null == mBluetoothGatt) {
             Log.e(TAG, "connect to miband first");
             return;
         }
 
-        BluetoothGattCharacteristic chara = gatt.getService(serviceUUID).getCharacteristic(characteristicId);
+        BluetoothGattCharacteristic chara = mBluetoothGatt.getService(serviceUUID).getCharacteristic(characteristicId);
         if (chara == null) {
             Log.e(TAG, "characteristicId " + characteristicId.toString() + " not found in service " + serviceUUID.toString());
             return;
         }
 
-
-        this.gatt.setCharacteristicNotification(chara, true);
+        this.mBluetoothGatt.setCharacteristicNotification(chara, true);
         BluetoothGattDescriptor descriptor = chara.getDescriptor(Profile.UUID_DESCRIPTOR_UPDATE_NOTIFICATION);
         descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-        this.gatt.writeDescriptor(descriptor);
+        this.mBluetoothGatt.writeDescriptor(descriptor);
         this.notifyListeners.put(characteristicId, listener);
     }
 
@@ -189,7 +197,7 @@ class BluetoothIO extends BluetoothGattCallback {
     public void onServicesDiscovered(BluetoothGatt gatt, int status) {
         super.onServicesDiscovered(gatt, status);
         if (status == BluetoothGatt.GATT_SUCCESS) {
-            this.gatt = gatt;
+            this.mBluetoothGatt = gatt;
             this.onSuccess(null);
         } else {
             this.onFail(status, "onServicesDiscovered fail");
@@ -209,6 +217,7 @@ class BluetoothIO extends BluetoothGattCallback {
             ActionCallback callback = this.currentCallback;
             this.currentCallback = null;
             callback.onSuccess(data);
+            isConnected = true ;
         }
     }
 
@@ -217,7 +226,53 @@ class BluetoothIO extends BluetoothGattCallback {
             ActionCallback callback = this.currentCallback;
             this.currentCallback = null;
             callback.onFail(errorCode, msg);
+            isConnected = false ;
         }
     }
 
+    private boolean checkIsSamsung() { //此方法是我自行使用众多三星手机总结出来，不一定很准确
+        String brand = android.os.Build.BRAND;
+        Log.e("", " brand:" + brand);
+        if (brand.toLowerCase().equals("samsung")) {
+            return true;
+        }
+        return false;
+    }
+
+    public void reconnect() {
+        if(checkIsSamsung()){
+            //这里最好 Sleep 300毫秒，测试发现有时候三星手机断线之后立马调用connect会容易蓝牙奔溃
+            mBluetoothGatt.connect();
+        }else{
+            connectGatt();
+            handler.removeCallbacks(runnableReconnect );
+            handler.postDelayed(runnableReconnect , 30*1000);
+        }
+    }
+
+    private void connectGatt() {
+        if (bluetoothDevice != null) {
+            if (mBluetoothGatt != null) {
+                mBluetoothGatt.close();
+                mBluetoothGatt.disconnect();
+                mBluetoothGatt = null;
+            }
+            mBluetoothGatt = bluetoothDevice.connectGatt(mContext, false,
+                    this);
+        } else {
+            Log.e(TAG,
+                    "the bluetoothDevice is null, please reset the bluetoothDevice");
+        }
+    }
+
+    Runnable runnableReconnect = new Runnable() {
+
+        @Override
+        public void run() {
+            if (isConnected) {
+                handler.postDelayed(this, 30 * 1000);
+                connectGatt();
+            }
+        }
+    };
 }

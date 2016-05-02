@@ -1,13 +1,14 @@
 package com.zhaoxiaodan.miband;
 
+import android.annotation.TargetApi;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
-import android.bluetooth.le.BluetoothLeScanner;
-import android.bluetooth.le.ScanCallback;
 import android.content.Context;
+import android.content.Intent;
+import android.os.Build;
 import android.util.Log;
 
 import com.zhaoxiaodan.miband.listeners.HeartRateNotifyListener;
@@ -34,34 +35,84 @@ public class MiBand {
         this.io = new BluetoothIO();
     }
 
-    public static void startScan(ScanCallback callback) {
-        BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
-        if (null == adapter) {
-            Log.e(TAG, "BluetoothAdapter is null");
-            return;
-        }
-        BluetoothLeScanner scanner = adapter.getBluetoothLeScanner();
-        if (null == scanner) {
-            Log.e(TAG, "BluetoothLeScanner is null");
-            return;
-        }
-        scanner.startScan(callback);
+    /**
+     * 重新连接
+     */
+    public void reconnect() {
+        this.io.reconnect();
     }
 
-    public static void stopScan(ScanCallback callback) {
+    /**
+     * 开始扫描手环
+     * @param callback
+     */
+    public void startScan(BluetoothAdapter.LeScanCallback callback)
+    {
+        //获取本地蓝牙适配器
         BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
-        if (null == adapter) {
-            Log.e(TAG, "BluetoothAdapter is null");
+        if(null == adapter)
+        {
+            Log.e(TAG,"BluetoothAdapter is null");
             return;
         }
-        BluetoothLeScanner scanner = adapter.getBluetoothLeScanner();
-        if (null == scanner) {
-            Log.e(TAG, "BluetoothLeScanner is null");
-            return;
+        //BluetoothLeScanner scanner = adapter.getBluetoothLeScanner();
+
+        if(!adapter.isEnabled()){
+            Intent openIntent=new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            context.startActivity(openIntent);
         }
-        scanner.stopScan(callback);
+
+        adapter.startLeScan(callback);
+
+	/*	if(null == scanner){
+			Log.e(TAG,"BluetoothLeScanner is null");
+			return;
+		}
+		scanner.startScan(callback);	*/
+
     }
 
+    /**
+     * 关闭蓝牙
+     * @return true if turn bluetooth off successfully, false otherwise
+     */
+    public static boolean turnOffBluetooth()
+    {
+        BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        if (bluetoothAdapter != null) {
+            return bluetoothAdapter.disable();
+        }
+        return false;
+    }
+
+
+    /**
+     * 停止扫描手环
+     * @param callback
+     */
+    public void stopScan(BluetoothAdapter.LeScanCallback callback)
+    {
+        BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+        if(null == adapter)
+        {
+            Log.e(TAG,"BluetoothAdapter is null");
+            return;
+        }
+	/*	BluetoothLeScanner scanner = adapter.getBluetoothLeScanner();
+		if(null == scanner){
+			Log.e(TAG,"BluetoothLeScanner is null");
+			return;
+		}
+
+		*/
+        if(!adapter.isEnabled()){
+            Intent openIntent=new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            context.startActivity(openIntent);
+        }
+
+        adapter.stopLeScan(callback);
+        //scanner.stopScan(callback);
+    }
     /**
      * 连接指定的手环
      *
@@ -276,7 +327,7 @@ public class MiBand {
     }
 
     public void showServicesAndCharacteristics() {
-        for (BluetoothGattService service : this.io.gatt.getServices()) {
+        for (BluetoothGattService service : this.io.mBluetoothGatt.getServices()) {
             Log.d(TAG, "onServicesDiscovered:" + service.getUuid());
 
             for (BluetoothGattCharacteristic characteristic : service.getCharacteristics()) {
