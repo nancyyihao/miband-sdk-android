@@ -33,7 +33,7 @@
 ### 1.1.3 - 2016-05-02
 - 增加断开重连机制
 - 修改demo app
-- ![p1](image/p1.jpg) ![p2](image/p2.jpg) ![p3](image/p3.jpg) ![p4](image/p4.jpg)
+- ![p1](image/p5.jpg) ![p2](image/p2.jpg) ![p3](image/p3.jpg) ![p4](image/p4.jpg)
 
 
 ### 1.1.2 - 2016-02-22
