@@ -1,16 +1,8 @@
 # miband-sdk-android
 
-##讨论室
-
-[![Join the chat at https://gitter.im/pangliang/miband-sdk-android](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/pangliang/miband-sdk-android?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-
 ##使用
 
-在项目的`build.gradle`文件的依赖部分添加:
-
-```
-compile 'com.zhaoxiaodan.miband:miband-sdk:1.1.2'
-```
+用Android Studio直接把miband-sdk代码搬过去即可.
 
 
 ## TODO
@@ -37,6 +29,12 @@ compile 'com.zhaoxiaodan.miband:miband-sdk:1.1.2'
 - 心率版本: 1.3.74.64
 
 ## Release Notes
+
+### 1.1.3 - 2016-05-02
+- 增加断开重连机制
+- 修改demo app
+- ![p1](image/p1.jpg) ![p2](image/p2.jpg) ![p3](image/p3.jpg) ![p4](image/p4.jpg)
+
 
 ### 1.1.2 - 2016-02-22
 
@@ -67,7 +65,7 @@ compile 'com.zhaoxiaodan.miband:miband-sdk:1.1.2'
 - 获取信号强度RSSI值信息
 
 ## API
-
+具体可看demo
 ```java
 
 // 实例化
