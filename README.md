@@ -255,3 +255,6 @@ miband.pair(new ActionCallback() {
 });
 
 ```
+
+## Thanks
+感谢@Time_Coder 提供demo代码
